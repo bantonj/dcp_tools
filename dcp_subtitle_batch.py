@@ -1,6 +1,9 @@
 import my_xml
 import os
 import subprocess
+import argparse
+
+subtitle_edit_path = r"C:\Program Files\Subtitle Edit\SubtitleEdit.exe"
 
 def parse_xml(xml):
     try:
@@ -27,6 +30,8 @@ def get_xml_path(id, ASSETMAP):
 def parse_cpl_subtitles(cpl, subtitle_list, ASSETMAP):
     parsed = parse_xml(cpl)
     for reel in parsed.CompositionPlaylist.ReelList.Reel:
+        if not hasattr(reel.AssetList, "MainSubtitle"):
+            continue
         try:
             language = reel.AssetList.MainSubtitle.Language.value
         except:
@@ -47,10 +52,19 @@ def build_subtitle_data(PKL, ASSETMAP):
     
 def convert_subtitles(subtitle_data, output_dir):
     for subtitle in subtitle_data:
-        subprocess.check_call(r'"C:\Program Files\Subtitle Edit\SubtitleEdit.exe" /convert %s subrip /outputfolder:%s' % (subtitle['subtitle_name'], output_dir), shell=True)
+        subprocess.check_call(r'%s /convert %s subrip /outputfolder:%s' % (subtitle_edit_path, subtitle['subtitle_name'], output_dir), shell=True)
         subrip_name = subtitle['video_name'].replace('.mxf', '') + '_' + subtitle['language'] + '.srt' 
         os.rename(os.path.join(output_dir, os.path.basename(subtitle['subtitle_name'].replace('.xml', '.srt'))), os.path.join(output_dir, subrip_name))
     
 if __name__ == "__main__":
-    subtitle_data = build_subtitle_data(r"C:\Users\bantonj\Downloads\la_boheme_test_subs\PKL__6d4367a1-a33b-4896-8d7b-76f02759a74b.xml", r"C:\Users\bantonj\Downloads\la_boheme_test_subs\ASSETMAP")
-    convert_subtitles(subtitle_data, r"C:\subtest")
+    parser = argparse.ArgumentParser("DCP Batch Subtitle Converter")
+    parser.add_argument("-p", "--pkl", help="path to PKL", nargs="?")
+    parser.add_argument("-a", "--assetmap", help="path to ASSETMAP", nargs="?")
+    parser.add_argument("-o", "--output_dir", help="path to output directory", nargs="?")
+    args = parser.parse_args()
+    
+    if not args.pkl or not args.assetmap or not args.output_dir:
+        print "Must provide -p PKL -a ASSETMAP -d output_directory"
+    else:
+        subtitle_data = build_subtitle_data(args.pkl, args.assetmap)
+        convert_subtitles(subtitle_data, args.output_dir)
