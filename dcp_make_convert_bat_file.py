@@ -42,7 +42,11 @@ def build_mxf_data(PKL, ASSETMAP):
     mxf_data = []
     for asset in assets:
         if asset.Type == "text/xml;asdcpKind=CPL":
-           mxf_data += parse_cpl_mxf(get_xml_path(asset.Id, ASSETMAP), ASSETMAP)
+           cpl_data = parse_cpl_mxf(get_xml_path(asset.Id, ASSETMAP), ASSETMAP)
+           master_pic_ids = [mxf['mainpicture_id'] for mxf in mxf_data]
+           for cpl_mxf in cpl_data:
+               if not cpl_mxf['mainpicture_id'] in master_pic_ids:
+                   mxf_data.append(cpl_mxf)
     return mxf_data
     
 def create_batch_file(pkl, assetmap, output_file, output_dir):
