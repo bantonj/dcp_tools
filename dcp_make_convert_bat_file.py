@@ -3,8 +3,8 @@ import os
 import subprocess
 import argparse
 
-ffmpeg_path = r"C:\Program Files\Subtitle Edit\ffmpeg.exe"
-asdcp_path = r"C:\software/asdcp.exe"
+ffmpeg_path = r"C:\software\ffmpeg-20131208-git-ae33007-win32-static\ffmpeg-20131208-git-ae33007-win32-static\bin\ffmpeg.exe"
+asdcp_path = r"C:\software\asdcp\asdcp-test.exe"
 
 def parse_xml(xml):
     try:
@@ -32,8 +32,15 @@ def parse_cpl_mxf(cpl, ASSETMAP):
     parsed = parse_xml(cpl)
     mxf_list = []
     for reel in parsed.CompositionPlaylist.ReelList.Reel:
-        mxf_list.append({"mainpicture_id": reel.AssetList.MainPicture.Id.value, "mainpicture_name": get_xml_path(reel.AssetList.MainPicture.Id.value, ASSETMAP),
-                         "mainsound_id": reel.AssetList.MainSound.Id.value, "mainsound_name": get_xml_path(reel.AssetList.MainSound.Id.value, ASSETMAP) })
+        try:
+            mxf_list.append({"mainpicture_id": reel.AssetList.MainPicture.Id.value, "mainpicture_name": get_xml_path(reel.AssetList.MainPicture.Id.value, ASSETMAP),
+                            "mainsound_id": reel.AssetList.MainSound.Id.value, "mainsound_name": get_xml_path(reel.AssetList.MainSound.Id.value, ASSETMAP) })
+        except AttributeError:
+            mxf_list.append({"mainpicture_id": parsed.CompositionPlaylist.ReelList.Reel.AssetList.MainPicture.Id.value, 
+                            "mainpicture_name": get_xml_path(parsed.CompositionPlaylist.ReelList.Reel.AssetList.MainPicture.Id.value, ASSETMAP),
+                            "mainsound_id": parsed.CompositionPlaylist.ReelList.Reel.AssetList.MainSound.Id.value, 
+                            "mainsound_name": get_xml_path(parsed.CompositionPlaylist.ReelList.Reel.AssetList.MainSound.Id.value, ASSETMAP) })
+            break
     return mxf_list
     
 def build_mxf_data(PKL, ASSETMAP):
@@ -42,7 +49,7 @@ def build_mxf_data(PKL, ASSETMAP):
     mxf_data = []
     for asset in assets:
         if asset.Type == "text/xml;asdcpKind=CPL":
-           mxf_data += parse_cpl_mxf(get_xml_path(asset.Id, ASSETMAP), ASSETMAP)
+           mxf_data += parse_cpl_mxf(get_xml_path(asset.Id, ASSETMAP), ASSETMAP) #Need to filter out duplicate MXFs here in case of CPLs that point to the same MXF
     return mxf_data
     
 def create_batch_file(pkl, assetmap, output_file, output_dir):
@@ -55,7 +62,7 @@ def create_batch_file(pkl, assetmap, output_file, output_dir):
         audio_out = os.path.join(output_dir, reel['mainsound_name']).replace(".mxf",".wav").replace(".MXF",".wav")
         batch += "%s -x  %s %s\n\n" % (asdcp_path, audio_out, audio_in)
     with open(output_file, 'w') as f:
-        f.write(batch)
+		f.write(batch)
         
 def create_bash_file(pkl, assetmap, output_file, output_dir):
     bash = ""
@@ -67,7 +74,7 @@ def create_bash_file(pkl, assetmap, output_file, output_dir):
         audio_out = os.path.join(output_dir, reel['mainsound_name']).replace(".mxf",".wav").replace(".MXF",".wav")
         bash += "%s -x  %s %s;\n\n" % (asdcp_path, audio_out, audio_in)
     with open(output_file, 'w') as f:
-        f.write(bash)
+		f.write(batch)
     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser("DCP Windows or Bash Script Creator for Converting MXFs")
