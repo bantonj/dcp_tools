@@ -38,9 +38,7 @@ def parse_cpl_mxf(cpl, ASSETMAP):
                             "mainsound_id": reel.AssetList.MainSound.Id.value, "mainsound_name": get_xml_path(reel.AssetList.MainSound.Id.value, ASSETMAP) })
         except AttributeError:
             mxf_list.append({"mainpicture_id": parsed.CompositionPlaylist.ReelList.Reel.AssetList.MainPicture.Id.value, 
-                            "mainpicture_name": get_xml_path(parsed.CompositionPlaylist.ReelList.Reel.AssetList.MainPicture.Id.value, ASSETMAP),
-                            "mainsound_id": parsed.CompositionPlaylist.ReelList.Reel.AssetList.MainSound.Id.value, 
-                            "mainsound_name": get_xml_path(parsed.CompositionPlaylist.ReelList.Reel.AssetList.MainSound.Id.value, ASSETMAP) })
+                            "mainpicture_name": get_xml_path(parsed.CompositionPlaylist.ReelList.Reel.AssetList.MainPicture.Id.value, ASSETMAP)})
             break
     return mxf_list
     
