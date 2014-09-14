@@ -64,7 +64,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     if not args.pkl or not args.assetmap or not args.output_dir:
-        print "Must provide -p PKL -a ASSETMAP -d output_directory"
+        print "Must provide -p PKL -a ASSETMAP -o output_directory"
     else:
         subtitle_data = build_subtitle_data(args.pkl, args.assetmap)
         convert_subtitles(subtitle_data, args.output_dir)
