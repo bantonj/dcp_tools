@@ -65,6 +65,7 @@ def create_batch_file(pkl, assetmap, output_file, output_dir):
         audio_out = os.path.join(output_dir, reel['mainsound_name']).replace(".mxf",".wav").replace(".MXF",".wav")
         batch += "%s -x  %s %s\n\n" % (asdcp_path, audio_out, audio_in)
     with open(output_file, 'w') as f:
+        f.write(batch)
         
 def create_bash_file(pkl, assetmap, output_file, output_dir):
     bash = ""
@@ -76,6 +77,7 @@ def create_bash_file(pkl, assetmap, output_file, output_dir):
         audio_out = os.path.join(output_dir, reel['mainsound_name']).replace(".mxf",".wav").replace(".MXF",".wav")
         bash += "%s -x  %s %s;\n\n" % (asdcp_path, audio_out, audio_in)
     with open(output_file, 'w') as f:
+        f.write(bash)
     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser("DCP Windows or Bash Script Creator for Converting MXFs")
