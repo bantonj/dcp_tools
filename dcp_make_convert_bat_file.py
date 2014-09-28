@@ -4,7 +4,7 @@ import subprocess
 import argparse
 
 ffmpeg_path = r"C:\Program Files\Subtitle Edit\ffmpeg.exe"
-asdcp_path = r"C:\software/asdcp.exe"
+asdcp_path = r"C:\software\asdcp\asdcp-test.exe"
 
 def parse_xml(xml):
     try:
