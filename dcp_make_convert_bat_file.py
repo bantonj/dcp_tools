@@ -6,6 +6,7 @@ import argparse
 
 ffmpeg_path = r"C:\software\ffmpeg-20131208-git-ae33007-win32-static\ffmpeg-20131208-git-ae33007-win32-static\bin\ffmpeg.exe"
 asdcp_path = r"C:\software\asdcp\asdcp-test.exe"
+open_dcp_cli = r"C:\open_dcp.exe"
 
 def parse_xml(xml):
     try:
@@ -78,6 +79,35 @@ def create_bash_file(pkl, assetmap, output_file, output_dir):
         bash += "%s -x  %s %s;\n\n" % (asdcp_path, audio_out, audio_in)
     with open(output_file, 'w') as f:
         f.write(bash)
+        
+def create_decrypt_text(key_string, cpl_dict, output_dir):
+    media_key = ('mainpicture_id', 'mainpicture_name') if key_string.split(':')[1] == 'MDIK' else ('mainsound_id', 'mainsound_name')
+    for x in cpl_dict:
+        if x[media_key[0]].split(':')[2] == key_string.split(':')[0]:
+            jpeg_out_dir = os.path.join(output_dir, x[media_key[1]].split('.mxf')[0]) + r'/'
+            return "%s -k %s -x %s %s\n\n" % (asdcp_path, key_string.split(':')[2].strip(), jpeg_out_dir, x[media_key[1]]), jpeg_out_dir
+      
+def create_wrap_text(jpeg_out_dir, output_dir):
+    wrap_path = os.path.join(output_dir, jpeg_out_dir[:-1] +'_decrypted.mxf')
+    return "%s -i %s %s\n\n" % (open_dcp_cli, jpeg_out_dir, wrap_path), wrap_path
+    
+def create_conv_text(decrypt_mxf, output_dir):
+    video_out = os.path.join(output_dir, os.path.join(output_dir, decrypt_mxf.split('.mxf')[0] + '.mov'))
+    return "%s -i %s -codec:v prores_ks -profile:v 2 %s\n\n" % (ffmpeg_path, decrypt_mxf, video_out)
+        
+def create_decrypt_script(cpl, key_file, asssetmap, output_file, output_dir):
+    f = open(key_file)
+    cpl_dict = parse_cpl_mxf(cpl, asssetmap)
+    script_text = ''
+    for key in f.readlines():
+        decrypt_text, jpeg_out_dir = create_decrypt_text(key, cpl_dict, output_dir)
+        script_text += decrypt_text
+        wrap_text, decrypt_mxf = create_wrap_text(jpeg_out_dir, output_dir)
+        script_text += wrap_text
+        script_text += create_conv_text(decrypt_mxf, output_dir)
+    with open(output_file, 'w') as f:
+        f.write(script_text)
+    
     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser("DCP Windows or Bash Script Creator for Converting MXFs")
@@ -86,10 +116,14 @@ if __name__ == "__main__":
     parser.add_argument("-o", "--output_file", help="path to output file", nargs="?")
     parser.add_argument("-m", "--output_dir", help="path to save mov files", nargs="?")
     parser.add_argument("-b", "--bash", help="create bash script instead of batch", nargs="?", const=True)
+    parser.add_argument("-d", "--decrypt", help="create decrypt script instead, argument is CPL to decrypt, requires key argument", nargs="?")
+    parser.add_argument("-k", "--key_file", help="key file from kdm-decrypt.rb", nargs="?")
     args = parser.parse_args()
     
-    if not args.pkl or not args.assetmap or not args.output_file or not args.output_dir:
+    if (not args.pkl and not args.decrypt) or not args.assetmap or not args.output_file or not args.output_dir:
         print "Must provide -p PKL -a ASSETMAP -o output_file -m output_dir"
+    elif args.decrypt:
+        create_decrypt_script(args.decrypt, args.key_file, args.assetmap, args.output_file, args.output_dir)
     elif args.bash:
         create_bash_file(args.pkl, args.assetmap, args.output_file, args.output_dir)
     else:
