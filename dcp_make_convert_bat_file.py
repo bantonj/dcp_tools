@@ -30,10 +30,11 @@ def get_xml_path(id, ASSETMAP):
             return x.ChunkList[0].Chunk.Path.value
     return False
     
-def parse_cpl_mxf(cpl, ASSETMAP):
+def parse_cpl_mxf_encrypted(cpl, ASSETMAP):
     parsed = parse_xml(cpl)
     mxf_list = []
     for reel in parsed.CompositionPlaylist.ReelList.Reel:
+        print reel.AssetList
         try:
             mxf_list.append({"mainpicture_id": reel.AssetList.MainPicture.Id.value, "mainpicture_name": get_xml_path(reel.AssetList.MainPicture.Id.value, ASSETMAP),
                             "mainpicture_key_id": reel.AssetList.MainPicture.KeyId.value,
@@ -45,7 +46,22 @@ def parse_cpl_mxf(cpl, ASSETMAP):
                             "mainpicture_key_id": parsed.CompositionPlaylist.ReelList.Reel.AssetList.MainPicture.KeyId.value,
                             "mainsound_id": parsed.CompositionPlaylist.ReelList.Reel.AssetList.MainSound.Id.value, 
                             "mainsound_name": get_xml_path(parsed.CompositionPlaylist.ReelList.Reel.AssetList.MainSound.Id.value, ASSETMAP),
-                            "mainsound_key_id": parsed.CompositionPlaylist.ReelList.Reel.AssetList.MainSound.KeyId.value, })
+                            "mainsound_key_id": parsed.CompositionPlaylist.ReelList.Reel.AssetList.MainSound.KeyId.value})
+            break
+    return mxf_list
+    
+def parse_cpl_mxf(cpl, ASSETMAP):
+    parsed = parse_xml(cpl)
+    mxf_list = []
+    for reel in parsed.CompositionPlaylist.ReelList.Reel:
+        try:
+            mxf_list.append({"mainpicture_id": reel.AssetList.MainPicture.Id.value, "mainpicture_name": get_xml_path(reel.AssetList.MainPicture.Id.value, ASSETMAP),
+                            "mainsound_id": reel.AssetList.MainSound.Id.value, "mainsound_name": get_xml_path(reel.AssetList.MainSound.Id.value, ASSETMAP)})
+        except AttributeError:
+            mxf_list.append({"mainpicture_id": parsed.CompositionPlaylist.ReelList.Reel.AssetList.MainPicture.Id.value, 
+                            "mainpicture_name": get_xml_path(parsed.CompositionPlaylist.ReelList.Reel.AssetList.MainPicture.Id.value, ASSETMAP),
+                            "mainsound_id": parsed.CompositionPlaylist.ReelList.Reel.AssetList.MainSound.Id.value, 
+                            "mainsound_name": get_xml_path(parsed.CompositionPlaylist.ReelList.Reel.AssetList.MainSound.Id.value, ASSETMAP)})
             break
     return mxf_list
     
@@ -104,7 +120,7 @@ def create_conv_text(decrypt_mxf, output_dir):
         
 def create_decrypt_script(cpl, key_file, asssetmap, output_file, output_dir):
     f = open(key_file)
-    cpl_dict = parse_cpl_mxf(cpl, asssetmap)
+    cpl_dict = parse_cpl_mxf_encrypted(cpl, asssetmap)
     script_text = ''
     mxf_input_dir = os.path.dirname(cpl)
     for key in f.readlines():
