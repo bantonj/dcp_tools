@@ -65,6 +65,7 @@ def create_batch_file(pkl, assetmap, output_file, output_dir):
         audio_in = os.path.join(os.path.dirname(pkl), reel['mainsound_name'])
         audio_out = os.path.join(output_dir, reel['mainsound_name']).replace(".mxf",".wav").replace(".MXF",".wav")
         batch += "%s -x  %s %s\n\n" % (asdcp_path, audio_out, audio_in)
+        batch += "%s -i %s -c:a copy %s\n\n" % (ffmpeg_path, audio_out + '_1.wav', audio_out + '_mapped.wav')
     with open(output_file, 'w') as f:
         f.write(batch)
         
