@@ -3,7 +3,7 @@ import os
 import subprocess
 import argparse
 
-subtitle_edit_path = r"C:\Program Files\Subtitle Edit\SubtitleEdit.exe"
+subtitle_edit_path = r'"C:\Program Files (x86)\Subtitle Edit\SubtitleEdit.exe"'
 
 def parse_xml(xml):
     try:
@@ -30,8 +30,13 @@ def get_xml_path(id, ASSETMAP):
 def parse_cpl_subtitles(cpl, subtitle_list, ASSETMAP):
     parsed = parse_xml(cpl)
     for reel in parsed.CompositionPlaylist.ReelList.Reel:
-        if not hasattr(reel.AssetList, "MainSubtitle"):
-            continue
+        try:
+            if not hasattr(reel.AssetList, "MainSubtitle"):
+                continue
+        except AttributeError:
+            reel = parsed.CompositionPlaylist.ReelList.Reel
+            if not hasattr(reel.AssetList, "MainSubtitle"):
+                continue
         try:
             language = reel.AssetList.MainSubtitle.Language.value
         except:
@@ -39,6 +44,7 @@ def parse_cpl_subtitles(cpl, subtitle_list, ASSETMAP):
         subtitle_list.append({"subtitle_id": reel.AssetList.MainSubtitle.Id.value, "video_id": reel.AssetList.MainPicture.Id.value, 
                               "video_name": get_xml_path(reel.AssetList.MainPicture.Id.value, ASSETMAP), "language": language,
                               "subtitle_name":  get_xml_path(reel.AssetList.MainSubtitle.Id.value, ASSETMAP)})
+        
     return subtitle_list
 
 def build_subtitle_data(PKL, ASSETMAP):
@@ -54,7 +60,10 @@ def convert_subtitles(subtitle_data, output_dir):
     for subtitle in subtitle_data:
         subprocess.check_call(r'%s /convert %s subrip /outputfolder:%s' % (subtitle_edit_path, subtitle['subtitle_name'], output_dir), shell=True)
         subrip_name = subtitle['video_name'].replace('.mxf', '') + '_' + subtitle['language'] + '.srt' 
-        os.rename(os.path.join(output_dir, os.path.basename(subtitle['subtitle_name'].replace('.xml', '.srt'))), os.path.join(output_dir, subrip_name))
+        try:
+            os.rename(os.path.join(output_dir, os.path.basename(subtitle['subtitle_name'].replace('.xml', '.srt'))), os.path.join(output_dir, subrip_name))
+        except WindowsError:
+            pass
     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser("DCP Batch Subtitle Converter")
