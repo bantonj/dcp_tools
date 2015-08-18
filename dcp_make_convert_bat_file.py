@@ -34,7 +34,6 @@ def parse_cpl_mxf_encrypted(cpl, ASSETMAP):
     parsed = parse_xml(cpl)
     mxf_list = []
     for reel in parsed.CompositionPlaylist.ReelList.Reel:
-        print reel.AssetList
         try:
             mxf_list.append({"mainpicture_id": reel.AssetList.MainPicture.Id.value, "mainpicture_name": get_xml_path(reel.AssetList.MainPicture.Id.value, ASSETMAP),
                             "mainpicture_key_id": reel.AssetList.MainPicture.KeyId.value,
@@ -78,12 +77,15 @@ def build_mxf_data(PKL, ASSETMAP):
                    mxf_data.append(cpl_mxf)
     return mxf_data
     
-def create_batch_file(pkl, assetmap, output_file, output_dir):
+def create_batch_file(pkl, assetmap, output_file, output_dir, crop):
     batch = ""
     for reel in build_mxf_data(pkl, assetmap):
         video_in = os.path.join(os.path.dirname(pkl), reel['mainpicture_name'])
         video_out = os.path.join(output_dir, reel['mainpicture_name']).replace(".mxf",".mov").replace(".MXF",".mov")
-        batch += "%s -i %s -codec:v prores_ks -profile:v 2 %s\n\n" % (ffmpeg_path, video_in, video_out)
+        if crop:
+            batch += '%s -i %s -codec:v prores_ks -profile:v 2 -filter:v "crop=1920:1080:39:0" %s\n\n' % (ffmpeg_path, video_in, video_out)
+        else:
+            batch += '%s -i %s -codec:v prores_ks -profile:v 2 %s\n\n' % (ffmpeg_path, video_in, video_out)
         audio_in = os.path.join(os.path.dirname(pkl), reel['mainsound_name'])
         audio_out = os.path.join(output_dir, reel['mainsound_name']).replace(".mxf",".wav").replace(".MXF",".wav")
         batch += "%s -x  %s %s\n\n" % (asdcp_path, audio_out, audio_in)
@@ -91,12 +93,15 @@ def create_batch_file(pkl, assetmap, output_file, output_dir):
     with open(output_file, 'w') as f:
         f.write(batch)
         
-def create_bash_file(pkl, assetmap, output_file, output_dir):
+def create_bash_file(pkl, assetmap, output_file, output_dir, crop):
     bash = ""
     for reel in build_mxf_data(pkl, assetmap):
         video_in = os.path.join(os.path.dirname(pkl), reel['mainpicture_name'])
         video_out = os.path.join(output_dir, reel['mainpicture_name']).replace(".mxf",".mov").replace(".MXF",".mov")
-        bash += "%s -i %s -codec:v prores_ks -profile:v 2 %s;\n\n" % (ffmpeg_path, video_in, video_out)
+        if crop:
+            bash += '%s -i %s -codec:v prores_ks -profile:v 2 -filter:v "crop=1920:1080:39:0" %s;\n\n' % (ffmpeg_path, video_in, video_out)
+        else:
+            bash += "%s -i %s -codec:v prores_ks -profile:v 2 %s;\n\n" % (ffmpeg_path, video_in, video_out)
         audio_in = os.path.join(os.path.dirname(pkl), reel['mainsound_name'])
         audio_out = os.path.join(output_dir, reel['mainsound_name']).replace(".mxf",".wav").replace(".MXF",".wav")
         bash += "%s -x  %s %s;\n\n" % (asdcp_path, audio_out, audio_in)
@@ -143,13 +148,14 @@ if __name__ == "__main__":
     parser.add_argument("-b", "--bash", help="create bash script instead of batch", nargs="?", const=True)
     parser.add_argument("-d", "--decrypt", help="create decrypt script instead, argument is CPL to decrypt, requires key argument", nargs="?")
     parser.add_argument("-k", "--key_file", help="key file from kdm-decrypt.rb", nargs="?")
+    parser.add_argument("-c", "--crop", help="Crop 1998x1080 to 1920x1080", nargs="?", default=False, const=True)
     args = parser.parse_args()
     
     if (not args.pkl and not args.decrypt) or not args.assetmap or not args.output_file or not args.output_dir:
         print "Must provide -p PKL -a ASSETMAP -o output_file -m output_dir"
     elif args.decrypt:
-        create_decrypt_script(args.decrypt, args.key_file, args.assetmap, args.output_file, args.output_dir)
+        create_decrypt_script(args.decrypt, args.key_file, args.assetmap, args.output_file, args.output_dir, args.crop)
     elif args.bash:
-        create_bash_file(args.pkl, args.assetmap, args.output_file, args.output_dir)
+        create_bash_file(args.pkl, args.assetmap, args.output_file, args.output_dir, args.crop)
     else:
-        create_batch_file(args.pkl, args.assetmap, args.output_file, args.output_dir)
+        create_batch_file(args.pkl, args.assetmap, args.output_file, args.output_dir, args.crop)
