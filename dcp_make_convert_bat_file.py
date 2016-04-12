@@ -110,20 +110,26 @@ def create_bash_file(pkl, assetmap, output_file, output_dir, crop):
         f.write(bash)
         
 def create_decrypt_text(key_string, cpl_dict, output_dir, mxf_input_dir):
+    text = ""
     media_key = ('mainpicture_key_id', 'mainpicture_name') if key_string.split(':')[1] == 'MDIK' else ('mainsound_key_id', 'mainsound_name')
     for x in cpl_dict:
         if x[media_key[0]].split(':')[2] == key_string.split(':')[0]:
             jpeg_out_dir = os.path.join(output_dir, x[media_key[1]].split('.mxf')[0]) + r'/'
+            text =+ 'if not exist "%s" mkdir %s\n' % (jpeg_out_dir, jpeg_out_dir)
             mxf_input = os.path.join(mxf_input_dir, x[media_key[1]])
-            return "%s -k %s -x %s %s\n\n" % (asdcp_path, key_string.split(':')[2].strip(), jpeg_out_dir, mxf_input), jpeg_out_dir
+            return text + "%s -k %s -x %s %s\n\n" % (asdcp_path, key_string.split(':')[2].strip(), jpeg_out_dir, mxf_input), jpeg_out_dir
       
 def create_wrap_text(jpeg_out_dir, output_dir):
     wrap_path = os.path.join(output_dir, jpeg_out_dir[:-1] +'_decrypted.mxf')
     return "%s -i %s -o %s\n\n" % (open_dcp_cli, jpeg_out_dir[:-1], wrap_path), wrap_path
     
 def create_conv_text(decrypt_mxf, output_dir):
-    video_out = os.path.join(output_dir, os.path.join(output_dir, decrypt_mxf.split('.mxf')[0] + '.mov'))
-    return "%s -i %s -codec:v prores_ks -profile:v 2 %s\n\n" % (ffmpeg_path, decrypt_mxf, video_out)
+    if "_audio" in decrypt_mxf.lower():
+        video_out = os.path.join(output_dir, os.path.join(output_dir, decrypt_mxf.split('.mxf')[0] + '.wav'))
+        return "%s -i %s -c:a copy %s\n\n" % (ffmpeg_path, audio_out + '_1.wav', audio_out + '_mapped.wav')
+    else:
+        video_out = os.path.join(output_dir, os.path.join(output_dir, decrypt_mxf.split('.mxf')[0] + '.mov'))
+        return "%s -i %s -codec:v prores_ks -profile:v 2 %s\n\n" % (ffmpeg_path, decrypt_mxf, video_out)
         
 def create_decrypt_script(cpl, key_file, asssetmap, output_file, output_dir):
     f = open(key_file)
