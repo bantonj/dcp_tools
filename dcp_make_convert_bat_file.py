@@ -123,13 +123,16 @@ def create_wrap_text(jpeg_out_dir, output_dir):
     wrap_path = os.path.join(output_dir, jpeg_out_dir[:-1] +'_decrypted.mxf')
     return "%s -i %s -o %s\n\n" % (open_dcp_cli, jpeg_out_dir[:-1], wrap_path), wrap_path
     
-def create_conv_text(decrypt_mxf, output_dir):
+def create_conv_text(decrypt_mxf, output_dir, crop=False):
     if "_audio" in decrypt_mxf.lower():
         video_out = os.path.join(output_dir, os.path.join(output_dir, decrypt_mxf.split('.mxf')[0] + '.wav'))
         return "%s -i %s -c:a copy %s\n\n" % (ffmpeg_path, audio_out + '_1.wav', audio_out + '_mapped.wav')
     else:
         video_out = os.path.join(output_dir, os.path.join(output_dir, decrypt_mxf.split('.mxf')[0] + '.mov'))
-        return "%s -i %s -codec:v prores_ks -profile:v 2 %s\n\n" % (ffmpeg_path, decrypt_mxf, video_out)
+        if crop:
+                return '%s -i %s -codec:v prores_ks -profile:v 2 -filter:v "crop=1920:1080:39:0" %s\n\n' % (ffmpeg_path, decrypt_mxf, video_out)
+            else:
+                "%s -i %s -codec:v prores_ks -profile:v 2 %s\n\n" % (ffmpeg_path, decrypt_mxf, video_out)
         
 def create_decrypt_script(cpl, key_file, asssetmap, output_file, output_dir):
     f = open(key_file)
